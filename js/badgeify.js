@@ -48,16 +48,28 @@ function badgeify(sectionSelectorOrElements) {
         var $other = $section.find(selector.trim());
         if (!$other.length) return false;
 
+        //Split values and handle negation (!)
+        var vals = values.split(',').map(v => v.trim());
+
         // checkbox: check .prop('checked'), otherwise .val()
+        let fieldValue;
         if ($other.is(':checkbox')) {
-            var checked = $other.prop('checked');
-            // treat values as a set
-            var vals = values.split(',').map(v => v.trim().toLowerCase());
-            return vals.includes(checked ? "true" : "false");
+            fieldValue = $other.prop('checked') ? "true" : "false";
         } else {
-            var otherVal = ($other.val() || '').toLowerCase();
-            var vals = values.split(',').map(v => v.trim().toLowerCase());
-            return vals.includes(otherVal);
+            fieldValue = ($other.val() || '').toLowerCase();
+        }
+
+        // Check each value condition
+        for (let val of vals) {
+            let isNegated = val.startsWith('!');
+            let cmpValue = isNegated ? val.slice(1).toLowerCase() : val.toLowerCase();
+
+            // For checkbox, match true/false
+            if (isNegated) {
+                if (fieldValue !== cmpValue) return true; // Required if NOT equal
+            } else {
+                if (fieldValue === cmpValue) return true; // Required if equal
+            }
         }
     }
 
@@ -77,6 +89,10 @@ function badgeify(sectionSelectorOrElements) {
                 setTimeout(function () {
                     if ($section.length) updateSectionBadge($section);
                 }, 0);
+            })
+            .on('changed.bs.select.badgeify', sectionSelectorOrElements + ' select.selectpicker', function () {
+                const $section = getOutermostSection(this);
+                if ($section.length) updateSectionBadge($section);
             });
     }
 
